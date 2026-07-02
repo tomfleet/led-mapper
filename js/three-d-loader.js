@@ -1,28 +1,26 @@
 /**
  * 3D Model Loader and LED Extractor
  * Supports glTF/glB formats and extracts LED positions from named entities (LED_0, LED_1, etc.)
+ *
+ * Usage:
+ *   import * as THREE from 'three';
+ *   import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+ *   const loader = new ThreeDLoader(THREE, GLTFLoader);
  */
 
 export class ThreeDLoader {
-  constructor() {
-    this.scene = null;
+  /**
+   * @param {Object} THREE - The THREE.js module instance
+   * @param {Function} GLTFLoader - The GLTFLoader constructor
+   */
+  constructor(THREE, GLTFLoader) {
+    if (!THREE || !GLTFLoader) {
+      throw new Error('ThreeDLoader requires THREE and GLTFLoader to be passed in');
+    }
+    this.THREE = THREE;
+    this.GLTFLoader = GLTFLoader;
     this.model = null;
     this.leds = [];
-    this.THREE = null;
-    this.GLTFLoader = null;
-  }
-
-  /**
-   * Load THREE.js and dependencies
-   */
-  async loadThreeJS() {
-    if (this.THREE) return;
-
-    const threeModule = await import('https://cdn.jsdelivr.net/npm/three@r128/build/three.module.js');
-    this.THREE = threeModule;
-
-    const loaderModule = await import('https://cdn.jsdelivr.net/npm/three@r128/examples/jsm/loaders/GLTFLoader.js');
-    this.GLTFLoader = loaderModule.GLTFLoader;
   }
 
   /**
@@ -31,22 +29,15 @@ export class ThreeDLoader {
    * @returns {Promise<void>}
    */
   async load(fileOrUrl) {
-    await this.loadThreeJS();
-
     const url = fileOrUrl instanceof File
       ? URL.createObjectURL(fileOrUrl)
       : fileOrUrl;
 
-    // Setup scene
-    this.scene = new this.THREE.Scene();
-    this.scene.background = new this.THREE.Color(0x2a2a2a);
-
-    // Load model
+    // Load model using the provided GLTFLoader
     const loader = new this.GLTFLoader();
     return new Promise((resolve, reject) => {
       loader.load(url, (gltf) => {
         this.model = gltf.scene;
-        this.scene.add(this.model);
         this.extractLEDs();
         resolve();
       }, undefined, reject);
@@ -60,6 +51,7 @@ export class ThreeDLoader {
   extractLEDs() {
     this.leds = [];
     const ledMap = {};
+    const vector3 = new this.THREE.Vector3();
 
     // Traverse the model and find all entities matching LED_n pattern
     this.model.traverse((child) => {
@@ -68,14 +60,13 @@ export class ThreeDLoader {
         const index = parseInt(match[1]);
         
         // Get world position
-        const worldPos = new this.THREE.Vector3();
-        child.getWorldPosition(worldPos);
+        child.getWorldPosition(vector3);
         
         ledMap[index] = {
           index,
-          x: worldPos.x,
-          y: worldPos.y,
-          z: worldPos.z,
+          x: vector3.x,
+          y: vector3.y,
+          z: vector3.z,
           object: child, // Keep reference for visualization
         };
       }
@@ -89,28 +80,16 @@ export class ThreeDLoader {
 
   /**
    * Get LEDs in format compatible with led-mapper (2D projection)
-   * Converts 3D coordinates to 2D by dropping Z axis
-   * @returns {Array} Array of LED objects with index, x, y
+   * Preserves original coordinate values for compatibility with the main mapper.
+   * @returns {Array} Array of LED objects with index, x, y (original 3D coords as 2D)
    */
   getLEDsAs2D() {
     if (this.leds.length === 0) return [];
 
-    // Find min/max for normalization
-    let minX = Infinity, maxX = -Infinity;
-    let minY = Infinity, maxY = -Infinity;
-
-    this.leds.forEach(led => {
-      minX = Math.min(minX, led.x);
-      maxX = Math.max(maxX, led.x);
-      minY = Math.min(minY, led.y);
-      maxY = Math.max(maxY, led.y);
-    });
-
-    // Convert to 2D array, normalized to 0-255 range for led-mapper compatibility
     return this.leds.map(led => ({
       index: led.index,
-      x: ((led.x - minX) / (maxX - minX)) * 255,
-      y: ((led.y - minY) / (maxY - minY)) * 255,
+      x: led.x,
+      y: led.y,
       z: led.z, // Keep Z for reference
     }));
   }
@@ -155,7 +134,7 @@ export class ThreeDLoader {
   }
 
   /**
-   * Get model bounds
+   * Get model bounds from the full 3D coordinates
    * @returns {Object} {minX, maxX, minY, maxY, minZ, maxZ}
    */
   getBounds() {

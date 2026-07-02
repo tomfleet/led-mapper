@@ -4,11 +4,14 @@
  */
 
 import ThreeDLoader from './three-d-loader.js';
-import { parsePixelblazeText } from './pixelblaze.js';
 
 export class ThreeDIntegration {
-  constructor() {
-    this.loader = new ThreeDLoader();
+  /**
+   * @param {Object} THREE - The THREE.js module instance
+   * @param {Function} GLTFLoader - The GLTFLoader constructor
+   */
+  constructor(THREE, GLTFLoader) {
+    this.loader = new ThreeDLoader(THREE, GLTFLoader);
     this.leds2D = [];
     this.bounds = null;
   }
@@ -76,7 +79,7 @@ export class ThreeDIntegration {
 
   /**
    * Get model bounds information
-   * @returns {Object} {minX, maxX, minY, maxY, minZ, maxZ, width, height, depth}
+   * @returns {Object} {minX, maxX, minY, maxY, minZ, maxZ, width, height, depth, centerX, centerY, centerZ}
    */
   getBounds() {
     if (!this.bounds) return null;
@@ -144,12 +147,18 @@ export class ThreeDIntegration {
       errors.push(`LED sequence should start at 0, but starts at ${indices[0]}`);
     }
 
-    // Check for gaps
+    // Check for gaps between sequential indices
+    // e.g., if we have [0, 1, 3, 4], there's a gap at index 2
     for (let i = 0; i < indices.length - 1; i++) {
-      const expected = i;
-      const actual = indices[i];
-      if (actual !== expected) {
-        gaps.push(expected);
+      const current = indices[i];
+      const next = indices[i + 1];
+      const expectedNext = current + 1;
+      
+      if (next !== expectedNext) {
+        // Found a gap — add all missing indices between current and next
+        for (let g = expectedNext; g < next; g++) {
+          gaps.push(g);
+        }
       }
     }
 
