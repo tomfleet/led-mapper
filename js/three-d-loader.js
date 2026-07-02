@@ -8,6 +8,21 @@ export class ThreeDLoader {
     this.scene = null;
     this.model = null;
     this.leds = [];
+    this.THREE = null;
+    this.GLTFLoader = null;
+  }
+
+  /**
+   * Load THREE.js and dependencies
+   */
+  async loadThreeJS() {
+    if (this.THREE) return;
+
+    const threeModule = await import('https://cdn.jsdelivr.net/npm/three@r128/build/three.module.js');
+    this.THREE = threeModule;
+
+    const loaderModule = await import('https://cdn.jsdelivr.net/npm/three@r128/examples/jsm/loaders/GLTFLoader.js');
+    this.GLTFLoader = loaderModule.GLTFLoader;
   }
 
   /**
@@ -16,19 +31,18 @@ export class ThreeDLoader {
    * @returns {Promise<void>}
    */
   async load(fileOrUrl) {
+    await this.loadThreeJS();
+
     const url = fileOrUrl instanceof File
       ? URL.createObjectURL(fileOrUrl)
       : fileOrUrl;
 
-    // Dynamically import Three.js
-    const { Scene, PerspectiveCamera, WebGLRenderer, GLTFLoader, Mesh, MeshStandardMaterial, Color } = await import('https://cdn.jsdelivr.net/npm/three@r128/build/three.module.js');
-    
     // Setup scene
-    this.scene = new Scene();
-    this.scene.background = new Color(0x2a2a2a);
+    this.scene = new this.THREE.Scene();
+    this.scene.background = new this.THREE.Color(0x2a2a2a);
 
     // Load model
-    const loader = new GLTFLoader();
+    const loader = new this.GLTFLoader();
     return new Promise((resolve, reject) => {
       loader.load(url, (gltf) => {
         this.model = gltf.scene;
@@ -40,7 +54,7 @@ export class ThreeDLoader {
   }
 
   /**
-   * Extract LED positions from model by searching for named entities (LED_0, LED_1, etc.)
+   * Extract LED positions from model by searching for named entities (LED_n pattern)
    * @returns {Array} Array of LED objects with index, x, y, z coordinates
    */
   extractLEDs() {
@@ -54,7 +68,8 @@ export class ThreeDLoader {
         const index = parseInt(match[1]);
         
         // Get world position
-        const worldPos = child.getWorldPosition(new THREE.Vector3());
+        const worldPos = new this.THREE.Vector3();
+        child.getWorldPosition(worldPos);
         
         ledMap[index] = {
           index,
