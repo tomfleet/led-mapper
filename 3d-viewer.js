@@ -8,6 +8,8 @@ import ThreeDIntegration from './js/three-d-integration.js';
 let integration = null;
 let animationId = null;
 let isAnimating = false;
+let THREE = null;
+let OrbitControls = null;
 
 // DOM elements
 const inputModel = document.getElementById('inputModel');
@@ -33,37 +35,48 @@ let scene, camera, renderer;
 let cameraControls = null;
 
 /**
+ * Load Three.js library
+ */
+async function loadThreeJS() {
+  if (THREE) return;
+  
+  // Load Three.js
+  const threeModule = await import('https://cdn.jsdelivr.net/npm/three@r128/build/three.module.js');
+  THREE = threeModule.default || threeModule;
+  
+  // Load OrbitControls
+  const controlsModule = await import('https://cdn.jsdelivr.net/npm/three@r128/examples/jsm/controls/OrbitControls.js');
+  OrbitControls = controlsModule.OrbitControls;
+  
+  return { THREE, OrbitControls };
+}
+
+/**
  * Initialize Three.js scene
  */
 async function initThreeJS() {
-  const { Scene, PerspectiveCamera, WebGLRenderer, OrbitControls } = 
-    await import('https://cdn.jsdelivr.net/npm/three@r128/build/three.module.js');
-  const { OrbitControls: OC } = 
-    await import('https://cdn.jsdelivr.net/npm/three@r128/examples/jsm/controls/OrbitControls.js');
+  await loadThreeJS();
+  
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x2a2a2a);
 
-  scene = new Scene();
-  scene.background = new (await import('https://cdn.jsdelivr.net/npm/three@r128/build/three.module.js')).Color(0x2a2a2a);
-
-  camera = new PerspectiveCamera(75, canvas3d.clientWidth / canvas3d.clientHeight, 0.1, 1000);
+  camera = new THREE.PerspectiveCamera(75, canvas3d.clientWidth / canvas3d.clientHeight, 0.1, 1000);
   camera.position.z = 5;
 
-  renderer = new WebGLRenderer({ canvas: canvas3d, antialias: true });
+  renderer = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true });
   renderer.setSize(canvas3d.clientWidth, canvas3d.clientHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
 
-  cameraControls = new OC(camera, renderer.domElement);
+  cameraControls = new OrbitControls(camera, renderer.domElement);
   cameraControls.autoRotate = false;
   cameraControls.enableDamping = true;
   cameraControls.dampingFactor = 0.05;
 
   // Lighting
-  const { DirectionalLight, AmbientLight } = 
-    await import('https://cdn.jsdelivr.net/npm/three@r128/build/three.module.js');
-  
-  const ambientLight = new AmbientLight(0xffffff, 0.5);
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(ambientLight);
 
-  const directionalLight = new DirectionalLight(0xffffff, 0.8);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
   directionalLight.position.set(5, 5, 5);
   scene.add(directionalLight);
 
@@ -129,6 +142,14 @@ async function onLoadModel() {
     const model = integration.loader.model;
     if (model) {
       scene.add(model);
+      
+      // Re-add lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(5, 5, 5);
+      scene.add(directionalLight);
       
       // Auto-fit camera
       const bounds = integration.getBounds();
