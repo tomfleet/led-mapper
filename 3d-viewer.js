@@ -43,7 +43,7 @@ async function loadThreeJS() {
   // Load Three.js
   //const threeModule = await import('https://cdn.jsdelivr.net/npm/three@r128/build/three.module.js');
   const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js');
-  THREE = threeModule.default || threeModule;
+ // THREE = threeModule.default || threeModule;
   
   // Load OrbitControls
   const controlsModule = await import('https://cdn.jsdelivr.net/npm/three@r128/examples/jsm/controls/OrbitControls.js');
