@@ -3,13 +3,13 @@
  * Manages the 3D visualization and coordinate extraction workflow
  */
 
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import ThreeDIntegration from './js/three-d-integration.js';
 
 let integration = null;
 let animationId = null;
 let isAnimating = false;
-let THREE = null;
-let OrbitControls = null;
 
 // DOM elements
 const inputModel = document.getElementById('inputModel');
@@ -35,29 +35,9 @@ let scene, camera, renderer;
 let cameraControls = null;
 
 /**
- * Load Three.js library
- */
-async function loadThreeJS() {
-  if (THREE) return;
-  
-  // Load Three.js
-  //const threeModule = await import('https://cdn.jsdelivr.net/npm/three@r128/build/three.module.js');
-  const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js');
- // THREE = threeModule.default || threeModule;
-  
-  // Load OrbitControls
-  const controlsModule = await import('https://cdn.jsdelivr.net/npm/three@r128/examples/jsm/controls/OrbitControls.js');
-  OrbitControls = controlsModule.OrbitControls;
-  
-  return { THREE, OrbitControls };
-}
-
-/**
  * Initialize Three.js scene
  */
 async function initThreeJS() {
-  await loadThreeJS();
-  
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x2a2a2a);
 
