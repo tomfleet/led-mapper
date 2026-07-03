@@ -33,18 +33,31 @@ export class ThreeDIntegration {
     }
   }
 
-  /**
+    /**
    * Convert extracted 3D LEDs to Pixelblaze map format for led-mapper
+   * Normalizes coordinates to 0-255 range for compatibility
    * @returns {string} JSON string in Pixelblaze format [[x,y], [x,y], ...]
    */
   toPixelblazeFormat() {
     if (this.leds2D.length === 0) return '[]';
-    
-    const map = this.leds2D.map(led => [
-      Number(led.x.toFixed(3)),
-      Number(led.y.toFixed(3))
-    ]);
-    
+
+    // Find min/max of the 2D coordinates for normalization
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    for (const led of this.leds2D) {
+      if (led.x < minX) minX = led.x;
+      if (led.x > maxX) maxX = led.x;
+      if (led.y < minY) minY = led.y;
+      if (led.y > maxY) maxY = led.y;
+    }
+
+    // Normalize to 0-255 range
+    const map = this.leds2D.map(led => {
+      const x = maxX === minX ? 0 : Math.round(((led.x - minX) / (maxX - minX)) * 255);
+      const y = maxY === minY ? 0 : Math.round(((led.y - minY) / (maxY - minY)) * 255);
+      return [x, y];
+    });
+
     return JSON.stringify(map);
   }
 
