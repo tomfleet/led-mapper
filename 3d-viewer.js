@@ -76,7 +76,7 @@ async function initThreeJS() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x555555); // lighter background for debugging
 
-  // Use getBoundingClientRect for reliable dimensions
+    // Use getBoundingClientRect for reliable dimensions
   const canvasRect = canvas3d.getBoundingClientRect();
   const canvasWidth = canvasRect.width || canvas3d.clientWidth || 800;
   const canvasHeight = canvasRect.height || canvas3d.clientHeight || 600;
@@ -88,6 +88,8 @@ async function initThreeJS() {
   renderer = new THREE.WebGLRenderer({ canvas: canvas3d, antialias: true });
   renderer.setSize(canvasWidth, canvasHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
+
+  renderer.setViewport(0, 0, canvasWidth, canvasHeight);
 
   cameraControls = new OrbitControls(camera, renderer.domElement);
   cameraControls.autoRotate = false;
@@ -352,11 +354,20 @@ async function loadModelFromFile(file) {
       }
     }
 
-    // Show all cards
+        // Show all cards
     previewCard.style.display = 'block';
     controlsCard.style.display = 'block';
     outputCard.style.display = 'block';
     statsCard.style.display = 'block';
+
+    // Force canvas resize now that it's visible
+    const newWidth = canvas3d.clientWidth;
+    const newHeight = canvas3d.clientHeight;
+    if (newWidth > 0 && newHeight > 0) {
+      renderer.setSize(newWidth, newHeight);
+      camera.aspect = newWidth / newHeight;
+      camera.updateProjectionMatrix();
+    }
 
     updateStats();
     updateOutput();
